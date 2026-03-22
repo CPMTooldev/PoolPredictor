@@ -24,35 +24,45 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
     
-    - name: Extract ZIP file
+    - name: Extract ZIP file and fix structure
       run: |
+        # Extract all zip files
         for zipfile in *.zip; do
           if [ -f "$zipfile" ]; then
-            unzip -o "$zipfile" -d .
+            echo "Extracting $zipfile"
+            unzip -o "$zipfile"
             rm "$zipfile"
           fi
         done
+        
+        # Move files from PoolPredictor-master to root if it exists
+        if [ -d "PoolPredictor-master" ]; then
+          echo "Moving files from PoolPredictor-master to root"
+          shopt -s dotglob
+          mv PoolPredictor-master/* .
+          rm -rf PoolPredictor-master
+        fi
+        
+        echo "Directory structure after fix:"
+        ls -la
     
     - name: Make gradlew executable
       run: |
-        find . -name "gradlew" -exec chmod +x {} \;
         if [ -f "gradlew" ]; then
           chmod +x gradlew
+          echo "gradlew found in root"
+        else
+          echo "ERROR: gradlew not found!"
+          exit 1
         fi
     
     - name: Build APK
       run: |
-        if [ -f "gradlew" ]; then
-          ./gradlew assembleRelease --stacktrace
-        else
-          cd app
-          ../gradlew assembleRelease --stacktrace
-        fi
+        ./gradlew assembleRelease --stacktrace
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: PoolPredictor-APK
         path: |
-          **/build/outputs/apk/release/*.apk
-          **/app/build/outputs/apk/release/*.apk
+          app/build/outputs/apk/release/*.apk
